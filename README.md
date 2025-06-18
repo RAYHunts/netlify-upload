@@ -1,36 +1,150 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Netlify Image Upload Service
 
-## Getting Started
+A serverless image upload service built with Next.js and Netlify Functions.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- 🖼️ **Image Upload**: Upload images through a modern web interface
+- ⚡ **Serverless**: Powered by Netlify Functions for scalable processing
+- 🔒 **Validation**: File type and size validation
+- 📱 **Responsive**: Mobile-friendly interface
+- 🎨 **Modern UI**: Built with Tailwind CSS
+
+## Tech Stack
+
+- **Frontend**: Next.js 15 with TypeScript
+- **Styling**: Tailwind CSS 4
+- **Backend**: Netlify Functions
+- **Runtime**: Bun
+
+## Local Development
+
+1. **Install dependencies**:
+   ```bash
+   bun install
+   ```
+
+2. **Run the development server**:
+   ```bash
+   bun run dev
+   ```
+
+3. **Run with Netlify Functions** (recommended for testing uploads):
+   ```bash
+   bun run netlify:dev
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## How It Works
+
+### Frontend (`src/app/page.tsx`)
+- File selection with validation (image types only, max 5MB)
+- Image preview functionality
+- Upload progress indication
+- Result display with upload details
+
+### Backend (`netlify/functions/upload-image.ts`)
+- Accepts base64 encoded images via POST request
+- Validates image data format
+- Generates unique file IDs
+- Returns upload confirmation with metadata
+
+### Current Implementation
+This is a **demo implementation** that:
+- Accepts base64 encoded images
+- Validates file format and size
+- Generates unique file identifiers
+- Simulates upload processing
+- Returns mock upload URLs
+
+### Production Enhancements
+For production use, you would typically:
+- Integrate with cloud storage (AWS S3, Cloudinary, etc.)
+- Add authentication and authorization
+- Implement proper file validation and sanitization
+- Add rate limiting and abuse protection
+- Store file metadata in a database
+- Implement file deletion and management
+
+## API Endpoint
+
+### POST `/.netlify/functions/upload-image`
+
+**Request Body:**
+```json
+{
+  "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...",
+  "filename": "example.jpg"
+}
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Response (Success):**
+```json
+{
+  "success": true,
+  "message": "Image uploaded successfully",
+  "fileId": "a1b2c3d4e5f6...",
+  "filename": "a1b2c3d4e5f6.jpg",
+  "originalName": "example.jpg",
+  "size": 1234567,
+  "url": "https://your-cdn.com/uploads/a1b2c3d4e5f6.jpg",
+  "uploadedAt": "2024-01-01T00:00:00.000Z"
+}
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Response (Error):**
+```json
+{
+  "success": false,
+  "message": "Upload failed",
+  "error": "Invalid image data format"
+}
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## File Structure
 
-## Learn More
+```
+├── netlify/
+│   └── functions/
+│       └── upload-image.ts     # Serverless upload function
+├── src/
+│   └── app/
+│       ├── page.tsx           # Main upload interface
+│       ├── layout.tsx         # App layout
+│       └── globals.css        # Global styles
+├── netlify.toml               # Netlify configuration
+└── package.json
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Configuration
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The `netlify.toml` file configures:
+- Build command: `bun run build`
+- Functions directory: `netlify/functions`
+- Publish directory: `.next`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Upload Guidelines
 
-## Deploy on Vercel
+- **Supported formats**: JPEG, PNG, GIF, WebP
+- **Maximum file size**: 5MB
+- **Processing**: Serverless via Netlify Functions
+- **Storage**: Currently simulated (integrate cloud storage for production)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Connect to Netlify**:
+   - Push to your Git repository
+   - Connect the repository to Netlify
+   - Netlify will automatically detect the configuration
+
+2. **Environment Variables** (if needed for production):
+   - Add any required API keys or configuration to Netlify's environment variables
+
+3. **Deploy**:
+   - Netlify will automatically build and deploy your site
+   - Functions will be deployed to `/.netlify/functions/`
+
+## License
+
+MIT License
