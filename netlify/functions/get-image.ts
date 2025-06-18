@@ -1,40 +1,37 @@
-import { Handler } from "@netlify/functions";
 import { getStore } from "@netlify/blobs";
 
-const handler: Handler = async (event) => {
+const handler = async (req: Request) => {
   // Set CORS headers
-  const headers = {
+  const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
   };
 
-  if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 200,
-      headers,
-      body: "",
-    };
+  if (req.method === "OPTIONS") {
+    return new Response("", {
+      status: 200,
+      headers: corsHeaders,
+    });
   }
 
-  if (event.httpMethod !== "GET") {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: "Method not allowed" }),
-    };
+  if (req.method !== "GET") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
     // Extract filename from query parameters
-    const filename = event.queryStringParameters?.filename;
-
+    const url = new URL(req.url);
+    const filename = url.searchParams.get("filename");
+    
     if (!filename) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: "Filename parameter is required" }),
-      };
+      return new Response(JSON.stringify({ error: "Filename parameter is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Get Netlify Blob store
@@ -46,36 +43,31 @@ const handler: Handler = async (event) => {
     const metadata = metadataResponse?.metadata;
 
     if (!file) {
-      return {
-        statusCode: 404,
-        headers,
-        body: JSON.stringify({ error: "File not found" }),
-      };
+      return new Response(JSON.stringify({ error: "File not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Return the image with proper headers
-    return {
-      statusCode: 200,
+    return new Response(file, {
+      status: 200,
       headers: {
         "Content-Type": (metadata?.mimeType as string) || "image/jpeg",
         "Cache-Control": "public, max-age=31536000", // Cache for 1 year
-        "Content-Length": Buffer.from(file).length.toString(),
         "Access-Control-Allow-Origin": "*",
       },
-      body: Buffer.from(file).toString("base64"),
-      isBase64Encoded: true,
-    };
+    });
   } catch (error) {
     console.error("Get image error:", error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        error: "Internal server error",
-        message: "Failed to retrieve image",
-      }),
-    };
+    return new Response(JSON.stringify({
+      error: "Internal server error",
+      message: "Failed to retrieve image",
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 };
 
-export { handler };
+export default handler;

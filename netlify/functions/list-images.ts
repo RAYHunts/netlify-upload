@@ -1,24 +1,25 @@
-import { Handler } from "@netlify/functions";
 import { getStore } from "@netlify/blobs";
 
-const handler: Handler = async (event) => {
+const handler = async (req: Request) => {
   // Set CORS headers
-  const headers = {
+  const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Methods": "GET, OPTIONS",
   };
 
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers, body: "" };
+  if (req.method === "OPTIONS") {
+    return new Response("", {
+      status: 200,
+      headers: corsHeaders,
+    });
   }
 
-  if (event.httpMethod !== "GET") {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: "Method not allowed" }),
-    };
+  if (req.method !== "GET") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -32,9 +33,9 @@ const handler: Handler = async (event) => {
       blobs.map(async (blob) => {
         const metadataResponse = await store.getMetadata(blob.key);
         const metadata = metadataResponse?.metadata;
-
-        const baseUrl = event.headers.host?.includes("localhost") || event.headers.host?.includes("127.0.0.1") ? `http://${event.headers.host}` : `https://${event.headers.host}`;
-
+        
+        const baseUrl = new URL(req.url).origin;
+        
         return {
           filename: blob.key,
           size: parseInt(metadata?.size as string) || 0,
@@ -47,26 +48,24 @@ const handler: Handler = async (event) => {
       })
     );
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: true,
-        images: imageList,
-        count: imageList.length,
-      }),
-    };
+    return new Response(JSON.stringify({
+      success: true,
+      images: imageList,
+      count: imageList.length,
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("List images error:", error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        error: "Internal server error",
-        message: "Failed to list images",
-      }),
-    };
+    return new Response(JSON.stringify({
+      error: "Internal server error",
+      message: "Failed to list images",
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 };
 
-export { handler };
+export default handler;

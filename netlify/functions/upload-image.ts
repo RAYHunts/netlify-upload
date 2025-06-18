@@ -1,68 +1,50 @@
-import { Handler } from "@netlify/functions";
 import { getStore } from "@netlify/blobs";
-import { randomBytes } from "crypto";
+import type { Context } from "@netlify/functions";
+import { v4 as uuid } from "uuid";
 import path from "path";
 
-const handler: Handler = async (event) => {
+const handler = async (req: Request, context: Context) => {
   // Set CORS headers
-  const headers = {
+  const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
 
   // Handle preflight OPTIONS request
-  if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 200,
-      headers,
-      body: "",
-    };
+  if (req.method === "OPTIONS") {
+    return new Response("", {
+      status: 200,
+      headers: corsHeaders,
+    });
   }
 
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: "Method not allowed" }),
-    };
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
-    // Check if body exists
-    if (!event.body) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: "No file data received" }),
-      };
-    }
-
-    // For this demo, we'll handle base64 encoded images
-    // In production, you might want to integrate with cloud storage like AWS S3, Cloudinary, etc.
-
-    let imageData: string;
-    let filename: string;
-
+    // Get the request body as JSON
+    let requestData;
     try {
-      const bodyData = JSON.parse(event.body);
-      imageData = bodyData.image;
-      filename = bodyData.filename || "upload.jpg";
+      requestData = await req.json();
     } catch {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: "Invalid JSON data" }),
-      };
+      return new Response(JSON.stringify({ error: "Invalid JSON data" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Validate base64 image data
+    const { image: imageData, filename } = requestData;
+
     if (!imageData || !imageData.startsWith("data:image/")) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: "Invalid image data format" }),
-      };
+      return new Response(JSON.stringify({ error: "Invalid image data format" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Extract MIME type and base64 data
@@ -70,11 +52,10 @@ const handler: Handler = async (event) => {
     const mimeType = mimeTypePart.match(/data:([^;]+)/)?.[1] || "image/jpeg";
 
     if (!base64Data) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: "Invalid base64 image data" }),
-      };
+      return new Response(JSON.stringify({ error: "Invalid base64 image data" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Convert base64 to buffer
@@ -83,16 +64,15 @@ const handler: Handler = async (event) => {
     // Validate file size (5MB limit)
     const maxSize = 5 * 1024 * 1024; // 5MB
     if (imageBuffer.length > maxSize) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: "File too large. Maximum size is 5MB" }),
-      };
+      return new Response(JSON.stringify({ error: "File too large. Maximum size is 5MB" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Generate unique filename
-    const fileId = randomBytes(16).toString("hex");
-    const fileExtension = path.extname(filename) || ".jpg";
+    const fileId = uuid();
+    const fileExtension = path.extname(filename || "image.jpg") || ".jpg";
     const uniqueFilename = `${fileId}${fileExtension}`;
 
     // Get Netlify Blob store
@@ -101,45 +81,43 @@ const handler: Handler = async (event) => {
     // Upload to Netlify Blob
     await store.set(uniqueFilename, imageBuffer.buffer, {
       metadata: {
-        originalName: filename,
+        originalName: filename || "unknown",
         mimeType: mimeType,
         uploadedAt: new Date().toISOString(),
         fileId: fileId,
         size: imageBuffer.length.toString(),
+        country: context.geo?.country?.name || "Unknown",
       },
     });
 
     // Generate the blob URL for retrieval
-    const baseUrl = event.headers.host?.includes("localhost") || event.headers.host?.includes("127.0.0.1") ? `http://${event.headers.host}` : `https://${event.headers.host}`;
-
+    const baseUrl = new URL(req.url).origin;
     const imageUrl = `${baseUrl}/.netlify/functions/get-image?filename=${uniqueFilename}`;
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
-        success: true,
-        message: "Image uploaded successfully to Netlify Blob",
-        fileId,
-        filename: uniqueFilename,
-        originalName: filename,
-        size: imageBuffer.length,
-        mimeType: mimeType,
-        url: imageUrl,
-        uploadedAt: new Date().toISOString(),
-      }),
-    };
+    return new Response(JSON.stringify({
+      success: true,
+      message: "Image uploaded successfully to Netlify Blob",
+      fileId,
+      filename: uniqueFilename,
+      originalName: filename || "unknown",
+      size: imageBuffer.length,
+      mimeType: mimeType,
+      url: imageUrl,
+      uploadedAt: new Date().toISOString(),
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("Upload error:", error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
-        error: "Internal server error",
-        message: "Failed to upload image",
-      }),
-    };
+    return new Response(JSON.stringify({
+      error: "Internal server error",
+      message: "Failed to upload image",
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 };
 
-export { handler };
+export default handler;
