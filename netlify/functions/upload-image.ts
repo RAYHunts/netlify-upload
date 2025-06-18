@@ -121,3 +121,4 @@ const handler = async (req: Request, context: Context) => {
 };
 
 export default handler;
+export { handler };

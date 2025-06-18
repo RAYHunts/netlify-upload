@@ -69,3 +69,4 @@ const handler = async (req: Request) => {
 };
 
 export default handler;
+export { handler };
