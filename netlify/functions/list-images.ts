@@ -33,9 +33,9 @@ const handler = async (req: Request) => {
       blobs.map(async (blob) => {
         const metadataResponse = await store.getMetadata(blob.key);
         const metadata = metadataResponse?.metadata;
-        
+
         const baseUrl = new URL(req.url).origin;
-        
+
         return {
           filename: blob.key,
           size: parseInt(metadata?.size as string) || 0,
@@ -48,25 +48,30 @@ const handler = async (req: Request) => {
       })
     );
 
-    return new Response(JSON.stringify({
-      success: true,
-      images: imageList,
-      count: imageList.length,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        images: imageList,
+        count: imageList.length,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("List images error:", error);
-    return new Response(JSON.stringify({
-      error: "Internal server error",
-      message: "Failed to list images",
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        message: "Failed to list images",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 };
 
 export default handler;
-export { handler };

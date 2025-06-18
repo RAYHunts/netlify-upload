@@ -26,7 +26,7 @@ const handler = async (req: Request) => {
     // Extract filename from query parameters
     const url = new URL(req.url);
     const filename = url.searchParams.get("filename");
-    
+
     if (!filename) {
       return new Response(JSON.stringify({ error: "Filename parameter is required" }), {
         status: 400,
@@ -60,15 +60,17 @@ const handler = async (req: Request) => {
     });
   } catch (error) {
     console.error("Get image error:", error);
-    return new Response(JSON.stringify({
-      error: "Internal server error",
-      message: "Failed to retrieve image",
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        message: "Failed to retrieve image",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 };
 
 export default handler;
-export { handler };

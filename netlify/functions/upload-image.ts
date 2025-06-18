@@ -94,31 +94,36 @@ const handler = async (req: Request, context: Context) => {
     const baseUrl = new URL(req.url).origin;
     const imageUrl = `${baseUrl}/.netlify/functions/get-image?filename=${uniqueFilename}`;
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: "Image uploaded successfully to Netlify Blob",
-      fileId,
-      filename: uniqueFilename,
-      originalName: filename || "unknown",
-      size: imageBuffer.length,
-      mimeType: mimeType,
-      url: imageUrl,
-      uploadedAt: new Date().toISOString(),
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Image uploaded successfully to Netlify Blob",
+        fileId,
+        filename: uniqueFilename,
+        originalName: filename || "unknown",
+        size: imageBuffer.length,
+        mimeType: mimeType,
+        url: imageUrl,
+        uploadedAt: new Date().toISOString(),
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Upload error:", error);
-    return new Response(JSON.stringify({
-      error: "Internal server error",
-      message: "Failed to upload image",
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        message: "Failed to upload image",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 };
 
 export default handler;
-export { handler };
